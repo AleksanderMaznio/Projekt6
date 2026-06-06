@@ -1,32 +1,56 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Import subskrypcji</title>
-    <style>
-        body { font-family: sans-serif; padding: 2rem; background: #f9fafb; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 400px; }
-        button { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 15px;}
-        button:hover { background: #2563eb; }
-    </style>
-</head>
-<body>
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+            {{ __('Import danych') }}
+        </h2>
+    </x-slot>
 
-    <div class="card">
-        <h2>Wgraj historię z banku</h2>
-        <p>Obsługiwany format: CSV</p>
+    <div class="py-12">
+        <div class="max-w-lg mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900 dark:text-gray-100">
+                    
+                    <div class="text-center mb-6">
+                        <svg class="mx-auto h-10 w-10 text-indigo-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <h3 class="text-xl font-bold tracking-tight">Wgraj wyciąg CSV</h3>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">System automatycznie wyłapie ukryte subskrypcje.</p>
+                    </div>
 
-        <form action="/import" method="POST" enctype="multipart/form-data">
-            @csrf 
-            
-            <div>
-                <input type="file" name="csv_file" accept=".csv" required>
+                    <form action="/import" method="POST" enctype="multipart/form-data" class="space-y-5">
+                        @csrf 
+                        
+                        <div class="flex justify-center w-full">
+                            <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 hover:bg-gray-100 transition-all duration-200 group">
+                                <div class="flex flex-col items-center justify-center pt-4 pb-4">
+                                    <svg class="w-8 h-8 mb-3 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    <p class="mb-1 text-base text-gray-500 dark:text-gray-400"><span class="font-semibold">Wybierz plik</span> lub przeciągnij</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-500 uppercase tracking-widest">.CSV (max. 2MB)</p>
+                                </div>
+                                <input id="dropzone-file" type="file" name="csv_file" accept=".csv" class="hidden" required />
+                            </label>
+                        </div>
+                        
+                        <div class="flex justify-center mt-5">
+                            <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 w-full">
+                                Rozpocznij analizę
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
             </div>
-            
-            <button type="submit">Analizuj plik</button>
-        </form>
+        </div>
     </div>
 
-</body>
-</html>
+    <script>
+        document.getElementById('dropzone-file').addEventListener('change', function(e) {
+            let fileName = e.target.files[0].name;
+            let textElement = this.parentElement.querySelector('p.text-base');
+            textElement.innerHTML = `<span class="font-semibold text-indigo-500">Wybrano:</span> ${fileName}`;
+        });
+    </script>
+</x-app-layout>
