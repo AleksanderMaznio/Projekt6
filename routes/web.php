@@ -1,4 +1,5 @@
 <?php
+
 use App\Models\Subscription; 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportController;
@@ -23,6 +24,22 @@ Route::get('/dashboard', function () {
     // 3. Wysyłamy obie zmienne do widoku
     return view('dashboard', compact('transactions', 'subscriptions'));
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+// NOWA ŚCIEŻKA: ANALITYKA
+Route::get('/analytics', function () {
+    $userId = auth()->id();
+
+    // Pobieramy 5 największych odbiorców (tylko wydatki)
+    $chartStats = App\Models\Transaction::where('user_id', $userId)
+        ->where('amount', '<', 0)
+        ->selectRaw('counterparty, ABS(SUM(amount)) as total')
+        ->groupBy('counterparty')
+        ->orderByDesc('total')
+        ->take(5)
+        ->get();
+
+    return view('analytics', compact('chartStats'));
+})->middleware(['auth', 'verified'])->name('analytics');
 
 Route::middleware('auth')->group(function () {
     // Domyślne ścieżki profilu z Breeze
