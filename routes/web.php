@@ -5,7 +5,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportController;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -53,5 +53,14 @@ Route::middleware('auth')->group(function () {
     });
     Route::post('/import', [ImportController::class, 'store']);
 });
+//ADMIN
+Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
+    
+    // Teraz adres /admin kieruje do dashboardu admina
+    Route::get('/', function () {
+        return view('admin.dashboard');
+    })->name('dashboard');
 
+    Route::resource('users', AdminUserController::class);
+});
 require __DIR__.'/auth.php';
