@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Transaction;
 
 class ImportController extends Controller
 {
@@ -19,26 +20,25 @@ class ImportController extends Controller
         // 3. Otwieramy plik i mapujemy go wiersz po wierszu
         $data = array_map('str_getcsv', file($file->getRealPath()));
 
-        // 4. Dump & Die
-       // Usuwamy pierwszy element tablicy (bo to nagłówki: Data, Kwota itp.)
+        // 4. Usuwamy nagłówki (Data, Kwota itp.)
         array_shift($data);
 
-        // Przechodzimy przez każdy wiersz i zapisujemy do bazy
+        // 5. Zapisujemy transakcje w bazie
         foreach ($data as $row) {
-            // Zabezpieczenie przed pustymi liniami na końcu pliku CSV
             if (count($row) < 5) continue; 
 
-            \App\Models\Transaction::create([
-                'user_id' => 1, // Na sztywno przypisujemy do naszego fejkowego usera
+            Transaction::create([
+                'user_id' => auth()->id(), // <--- TUTAJ JEST POPRAWKA! Przypisuje do Twojego aktualnego konta
                 'transaction_date' => $row[0],
                 'amount' => $row[1],
                 'currency' => $row[2],
                 'title' => $row[3],
                 'counterparty' => $row[4],
-                'is_subscription' => false // Domyślnie na start
+                'is_subscription' => false
             ]);
         }
 
-        return "Elegancko! Plik wczytany i zapisany w bazie!";
+        // 6. AUTOMATYCZNE PRZEKIEROWANIE: Wracamy na dashboard od razu po imporcie
+        return redirect()->route('dashboard');
     }
 }
