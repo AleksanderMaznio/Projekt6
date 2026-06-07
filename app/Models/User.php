@@ -22,7 +22,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'is_admin'
+        'is_admin',
+        'is_premium',
         ];
 
     /**
@@ -50,5 +51,9 @@ class User extends Authenticatable
     public function isAdmin(): bool
 {
     return (bool) $this->is_admin;
+}
+public function isPremium(): bool
+{
+    return (bool) $this->is_premium;
 }
 }

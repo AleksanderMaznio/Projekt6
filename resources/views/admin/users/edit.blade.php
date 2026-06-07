@@ -41,7 +41,9 @@
                             <div class="relative">
                                 <select name="is_admin" class="w-full border-gray-300 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 appearance-none bg-white py-2 px-3 transition duration-200">
                                     <option value="0" {{ !$user->is_admin ? 'selected' : '' }}>Standardowy Użytkownik</option>
+                                    <option value="premium" {{ $user->is_premium ? 'selected' : '' }}>Użytkownik Premium</option>
                                     <option value="1" {{ $user->is_admin ? 'selected' : '' }}>Administrator Systemu</option>
+                                    
                                 </select>
                             </div>
                         </div>
