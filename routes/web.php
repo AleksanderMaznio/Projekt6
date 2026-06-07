@@ -6,31 +6,34 @@ use App\Http\Controllers\ImportController;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+
+// 1. STRONA GŁÓWNA (Dla niezalogowanych)
 Route::get('/', function () {
     return view('welcome');
 });
 
+// 2. DASHBOARD (Główny panel użytkownika)
 Route::get('/dashboard', function () {
-    // 1. Pobieramy wszystkie transakcje
-    $transactions = App\Models\Transaction::where('user_id', auth()->id())
+    // Pobieramy wszystkie transakcje zalogowanego użytkownika
+    $transactions = Transaction::where('user_id', auth()->id())
                         ->orderBy('transaction_date', 'desc')
                         ->get();
 
-    // 2. Pobieramy aktywne subskrypcje
+    // Pobieramy aktywne subskrypcje
     $subscriptions = Subscription::where('user_id', auth()->id())
                         ->where('is_active', true)
                         ->get();
 
-    // 3. Wysyłamy obie zmienne do widoku
     return view('dashboard', compact('transactions', 'subscriptions'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// NOWA ŚCIEŻKA: ANALITYKA
+// 3. ANALITYKA (Z rozróżnieniem na Premium - TYLKO JEDNA TRASA)
 Route::get('/analytics', function () {
-    $userId = auth()->id();
+    $user = auth()->user();
+    $userId = $user->id;
 
-    // Pobieramy 5 największych odbiorców (tylko wydatki)
-    $chartStats = App\Models\Transaction::where('user_id', $userId)
+    // Podstawowe dane (Dla każdego użytkownika)
+    $chartStats = Transaction::where('user_id', $userId)
         ->where('amount', '<', 0)
         ->selectRaw('counterparty, ABS(SUM(amount)) as total')
         ->groupBy('counterparty')
@@ -38,29 +41,52 @@ Route::get('/analytics', function () {
         ->take(5)
         ->get();
 
-    return view('analytics', compact('chartStats'));
+    // Dodatkowe dane (Tylko dla Premium i Admina)
+    $premiumStats = null;
+    
+    if ($user->isPremium() || $user->isAdmin()) {
+        $monthlyExpenses = Transaction::where('user_id', $userId)
+            ->where('amount', '<', 0)
+            ->selectRaw("strftime('%Y-%m', transaction_date) as month, ABS(SUM(amount)) as total")
+            ->groupBy('month')
+            ->orderBy('month', 'asc')
+            ->get();
+
+        $averageExpense = Transaction::where('user_id', $userId)
+            ->where('amount', '<', 0)
+            ->avg('amount');
+
+        $premiumStats = [
+            'monthly_expenses' => $monthlyExpenses,
+            'average_expense'  => abs($averageExpense ?? 0),
+        ];
+    }
+
+    return view('analytics', compact('chartStats', 'premiumStats'));
 })->middleware(['auth', 'verified'])->name('analytics');
 
+// 4. TRASY ZALOGOWANEGO UŻYTKOWNIKA (Profil i Import)
 Route::middleware('auth')->group(function () {
-    // Domyślne ścieżki profilu z Breeze
+    // Profil z Breeze
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // NASZE ŚCIEŻKI DO IMPORTU (chronione logowaniem)
+    // Import CSV
     Route::get('/import', function () {
         return view('import');
-    });
-    Route::post('/import', [ImportController::class, 'store']);
-});
-//ADMIN
-Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
+    })->name('import.index'); // warto dodać name
     
-    // Teraz adres /admin kieruje do dashboardu admina
+    Route::post('/import', [ImportController::class, 'store'])->name('import.store');
+});
+
+// 5. PANEL ADMINISTRATORA
+Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', function () {
         return view('admin.dashboard');
     })->name('dashboard');
 
     Route::resource('users', AdminUserController::class);
 });
+
 require __DIR__.'/auth.php';

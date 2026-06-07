@@ -21,29 +21,31 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
-        // 1. Walidujemy podstawowe dane oraz upewniamy się, że rola to jedna z trzech opcji
+        // 1. Walidacja danych z formularza
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
-            'role' => 'required|in:user,premium,admin', // <-- nowa walidacja roli
+            'role' => 'required|in:user,premium,admin',
         ]);
 
-        // 2. Mapujemy wybraną rolę z formularza na odpowiednie flagi boolean w bazie danych
+        // 2. Logika nadawania uprawnień (Admin dostaje true na obie flagi)
         if ($request->role === 'admin') {
             $user->is_admin = true;
-            $user->is_premium = false;
+            $user->is_premium = true;  // Admin automatycznie ma też premium
         } elseif ($request->role === 'premium') {
             $user->is_admin = false;
             $user->is_premium = true;
         } else {
-            // Zwykły użytkownik ('user')
             $user->is_admin = false;
             $user->is_premium = false;
         }
 
-        // 3. Aktualizujemy imię i mail z walidacji, a następnie zapisujemy wszystko razem
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
+        // 3. Wypełnienie pozostałych danych i zapis do bazy
+        $user->fill([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+        
         $user->save();
 
         return redirect()->route('admin.users.index')->with('success', 'Użytkownik zaktualizowany!');
@@ -51,12 +53,10 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        // 1. Nie pozwól usunąć samego siebie
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Nie możesz usunąć własnego konta!');
         }
 
-        // 2. Nie pozwól usunąć innego administratora
         if ($user->is_admin) {
             return back()->with('error', 'Nie możesz usunąć konta administratora!');
         }
