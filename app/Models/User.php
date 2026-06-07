@@ -22,7 +22,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-    ];
+        'is_admin'
+        ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -46,4 +47,8 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function isAdmin(): bool
+{
+    return (bool) $this->is_admin;
+}
 }

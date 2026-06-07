@@ -29,15 +29,16 @@
                                 @else
                                     <span class="text-green-500">Użytkownik</span>
                                 @endif
+     <td class="border-b p-2">
+                                <div class="flex gap-1"> <a href="{{ route('admin.users.edit', $user) }}" class="text-blue-500 hover:underline">Edytuj</a>
+                                    <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-red-500 hover:underline" onclick="return confirm('Na pewno?')">Usuń</button>
+                                    </form>
+                                </div>
                             </td>
-                            <td class="border-b p-2">
-    <a href="{{ route('admin.users.edit', $user) }}" class="text-blue-500 mr-2">Edytuj</a>
-    <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="inline">
-        @csrf
-        @method('DELETE')
-        <button class="text-red-500" onclick="return confirm('Na pewno?')">Usuń</button>
-    </form>
-</td>
+            
                         </tr>
                         @endforeach
                     </tbody>
