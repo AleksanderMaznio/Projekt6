@@ -36,15 +36,23 @@
                             @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Uprawnienia Systemowe</label>
-                            <div class="relative">
-                                <select name="is_admin" class="w-full border-gray-300 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 appearance-none bg-white py-2 px-3 transition duration-200">
-                                    <option value="0" {{ !$user->is_admin ? 'selected' : '' }}>Standardowy Użytkownik</option>
-                                    <option value="1" {{ $user->is_admin ? 'selected' : '' }}>Administrator Systemu</option>
-                                </select>
-                            </div>
-                        </div>
+                        <div class="mb-4">
+    <label for="role" class="block text-sm font-semibold text-gray-700 mb-1">Ranga użytkownika</label>
+    <select name="role" id="role" class="w-full border-gray-300 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition duration-200">
+        <option value="user" {{ (!$user->is_admin && !$user->is_premium) ? 'selected' : '' }}>
+            Zwykły użytkownik (Brak subskrypcji)
+        </option>
+        
+        <option value="premium" {{ (!$user->is_admin && $user->is_premium) ? 'selected' : '' }}>
+            Użytkownik Premium (Aktywna subskrypcja)
+        </option>
+        
+        <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>
+            Administrator
+        </option>
+    </select>
+    @error('role') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+</div>
 
                         <div class="flex items-center justify-between pt-6 border-t border-gray-100">
                             <a href="{{ route('admin.users.index') }}" class="text-sm text-gray-500 hover:text-gray-700 transition">

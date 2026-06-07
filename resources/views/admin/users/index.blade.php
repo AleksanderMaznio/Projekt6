@@ -15,7 +15,7 @@
                             <th class="border-b p-2">Imię</th>
                             <th class="border-b p-2">Email</th>
                             <th class="border-b p-2">Rola</th>
-                        </tr>
+                            <th class="border-b p-2 text-right">Akcje</th> </tr>
                     </thead>
                     <tbody>
                         @foreach($users as $user)
@@ -24,13 +24,19 @@
                             <td class="border-b p-2">{{ $user->name }}</td>
                             <td class="border-b p-2">{{ $user->email }}</td>
                             <td class="border-b p-2">
-                                @if($user->is_admin)
-                                    <span class="text-red-500 font-bold">Admin</span>
-                                @else
-                                    <span class="text-green-500">Użytkownik</span>
-                                @endif
-     <td class="border-b p-2">
-                                <div class="flex gap-1"> <a href="{{ route('admin.users.edit', $user) }}" class="text-blue-500 hover:underline">Edytuj</a>
+                                <div class="h-6 flex items-center">
+                                    @if($user->is_admin)
+                                        <span class="text-red-500 font-semibold">Admin</span>
+                                    @elseif($user->is_premium)
+                                        <span class="text-indigo-600 font-semibold">Premium</span>
+                                    @else
+                                        <span class="text-green-500">Użytkownik</span>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="border-b p-2 text-right">
+                                <div class="flex gap-3 justify-end items-center h-6"> 
+                                    <a href="{{ route('admin.users.edit', $user) }}" class="text-blue-500 hover:underline">Edytuj</a>
                                     <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
@@ -38,7 +44,6 @@
                                     </form>
                                 </div>
                             </td>
-            
                         </tr>
                         @endforeach
                     </tbody>
