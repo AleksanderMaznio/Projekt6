@@ -10,12 +10,12 @@
     <div class="py-12 bg-gray-50 min-h-screen">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                <div class="bg-indigo-600 p-6">
-                    <h3 class="text-white text-lg font-bold flex items-center">
-                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                        Edytuj Profil: {{ $user->name }}
-                    </h3>
-                </div>
+                        <div class="bg-indigo-600 p-6">
+                            <h3 class="text-white text-lg font-bold flex items-center">
+                                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                Edytuj Profil: {{ $user->name }}
+                            </h3>
+                        </div>
 
                 <div class="p-8">
                     <form action="{{ route('admin.users.update', $user) }}" method="POST" class="space-y-6">
