@@ -20,14 +20,15 @@
                     </svg>
                     Analityka
                 </a>
-      @if(auth()->user()->isAdmin())
-    <a href="{{ url('/admin') }}" class="inline-flex justify-center items-center gap-2 px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold rounded-xl shadow-md transition-all duration-300 transform hover:-translate-y-0.5 text-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-        </svg>
-        Panel Admina
-    </a>
-@endif
+                
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ url('/admin') }}" class="inline-flex justify-center items-center gap-2 px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold rounded-xl shadow-md transition-all duration-300 transform hover:-translate-y-0.5 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                        Panel Admina
+                    </a>
+                @endif
             </div>
         </div>
     </x-slot>
@@ -55,11 +56,19 @@
                             @foreach($subscriptions as $sub)
                                 <div class="p-5 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm bg-gray-50 dark:bg-gray-900 relative group transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                                     <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-bl-full rounded-tr-xl -z-10 transition-all group-hover:scale-150"></div>
-                                    <h4 class="font-bold text-lg uppercase tracking-wider text-gray-800 dark:text-gray-200">{{ $sub->name }}</h4>
-                                    <p class="text-3xl font-extrabold mt-3 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-500">-{{ $sub->price }} <span class="text-sm text-gray-400">{{ $sub->currency }}</span></p>
-                                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        Cykl: co {{ $sub->billing_cycle_days }} dni
+                                    
+                                    <h4 class="font-bold text-lg uppercase tracking-wider text-gray-800 dark:text-gray-200 truncate" title="{{ $sub->counterparty }}">
+                                        {{ $sub->counterparty }}
+                                    </h4>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{{ $sub->title }}</p>
+
+                                    <p class="text-3xl font-extrabold mt-3 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-500">
+                                        -{{ number_format(abs($sub->amount), 2, ',', ' ') }} <span class="text-sm text-gray-400">{{ $sub->currency }}</span>
+                                    </p>
+                                    
+                                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-3 flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        Ostatnia: {{ $sub->transaction_date }}
                                     </p>
                                 </div>
                             @endforeach
