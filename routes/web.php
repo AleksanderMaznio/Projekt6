@@ -14,56 +14,29 @@ Route::get('/', function () {
 
 // 2. DASHBOARD (Główny panel użytkownika)
 Route::get('/dashboard', function () {
-    // Pobieramy wszystkie transakcje zalogowanego użytkownika
+    // Pobieramy wszystkie transakcje zalogowanego użytkownika do historii transakcji
     $transactions = Transaction::where('user_id', auth()->id())
                         ->orderBy('transaction_date', 'desc')
                         ->get();
 
-    // Pobieramy aktywne subskrypcje
-    $subscriptions = Subscription::where('user_id', auth()->id())
-                        ->where('is_active', true)
+    // POPRAWKA: Pobieramy transakcje oznaczone jako subskrypcje (kwoty ujemne, z flagą is_subscription)
+    $subscriptions = Transaction::where('user_id', auth()->id())
+                        ->where('is_subscription', true)
+                        ->where('amount', '<', 0)
+                        ->orderBy('transaction_date', 'desc')
                         ->get();
 
     return view('dashboard', compact('transactions', 'subscriptions'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// 3. ANALITYKA (Z rozróżnieniem na Premium - TYLKO JEDNA TRASA)
-Route::get('/analytics', function () {
-    $user = auth()->user();
-    $userId = $user->id;
-
-    // Podstawowe dane (Dla każdego użytkownika)
-    $chartStats = Transaction::where('user_id', $userId)
-        ->where('amount', '<', 0)
-        ->selectRaw('counterparty, ABS(SUM(amount)) as total')
-        ->groupBy('counterparty')
-        ->orderByDesc('total')
-        ->take(5)
-        ->get();
-
-    // Dodatkowe dane (Tylko dla Premium i Admina)
-    $premiumStats = null;
+// 3. ANALITYKA I ZARZĄDZANIE SUBSKRYPCJAMI (Przeniesione do ProfileController)
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Trasa wyświetlania analityki, filtrów i sortowania
+    Route::get('/analytics', [ProfileController::class, 'analytics'])->name('analytics');
     
-    if ($user->isPremium() || $user->isAdmin()) {
-        $monthlyExpenses = Transaction::where('user_id', $userId)
-            ->where('amount', '<', 0)
-            ->selectRaw("strftime('%Y-%m', transaction_date) as month, ABS(SUM(amount)) as total")
-            ->groupBy('month')
-            ->orderBy('month', 'asc')
-            ->get();
-
-        $averageExpense = Transaction::where('user_id', $userId)
-            ->where('amount', '<', 0)
-            ->avg('amount');
-
-        $premiumStats = [
-            'monthly_expenses' => $monthlyExpenses,
-            'average_expense'  => abs($averageExpense ?? 0),
-        ];
-    }
-
-    return view('analytics', compact('chartStats', 'premiumStats'));
-})->middleware(['auth', 'verified'])->name('analytics');
+    // Trasa POST obsługująca teoretyczną rezygnację z subskrypcji (kasowanie wierszy)
+    Route::post('/analytics/cancel-subscription', [ProfileController::class, 'cancelSubscription'])->name('subscription.cancel');
+});
 
 // 4. TRASY ZALOGOWANEGO UŻYTKOWNIKA (Profil i Import)
 Route::middleware('auth')->group(function () {
@@ -71,11 +44,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/analytics/toggle-subscription/{id}', [ProfileController::class, 'toggleSubscription'])->name('transaction.toggle-subscription');
 
     // Import CSV
     Route::get('/import', function () {
         return view('import');
-    })->name('import.index'); // warto dodać name
+    })->name('import.index');
     
     Route::post('/import', [ImportController::class, 'store'])->name('import.store');
 });
