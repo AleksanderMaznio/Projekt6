@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Subscription; 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportController;
 use App\Models\Transaction;
@@ -12,6 +11,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// NOWOŚĆ: Trasa do trybu demonstracyjnego (Publiczna, bez logowania)
+Route::get('/demo', function () {
+    return view('demo');
+})->name('demo');
+
 // 2. DASHBOARD (Główny panel użytkownika)
 Route::get('/dashboard', function () {
     // Pobieramy wszystkie transakcje zalogowanego użytkownika do historii transakcji
@@ -19,7 +23,7 @@ Route::get('/dashboard', function () {
                         ->orderBy('transaction_date', 'desc')
                         ->get();
 
-    // POPRAWKA: Pobieramy transakcje oznaczone jako subskrypcje (kwoty ujemne, z flagą is_subscription)
+    // Pobieramy transakcje oznaczone jako subskrypcje (kwoty ujemne, z flagą is_subscription)
     $subscriptions = Transaction::where('user_id', auth()->id())
                         ->where('is_subscription', true)
                         ->where('amount', '<', 0)
