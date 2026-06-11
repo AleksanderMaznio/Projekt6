@@ -61,77 +61,75 @@ class ProfileController extends Controller
     }
 
     /**
-     * METODA PREMIUM: Obsługa widoku analityki, filtrów, sortowania (Kompatybilna z SQLite)
+     * METODA PREMIUM: Obsługa widoku analityki, filtrów, sortowania (W pełni kompatybilna z SQLite)
      */
-    public function analytics(Request $request): View
+    public function analytics(Request $request)
     {
-        // 1. NAPRAWA BŁĘDU: Pobieramy zalogowanego użytkownika na samym początku metody
-        $user = auth()->user();
-        
-        // 2. WYMUSZENIE PREMIUM: Do testów ustawione na true lub dynamicznie z modelu
-        $isPremium = true; 
+        // 1. Definiowanie dynamicznego limitu transakcji na stronę z formularza (domyślnie 15)
+        $perPage = (int) $request->input('per_page', 15);
 
-        // Pobieramy tylko i wyłącznie wydatki (kwoty ujemne) zalogowanego użytkownika
-        $query = Transaction::where('user_id', $user->id)->where('amount', '<', 0);
+        // Podstawa zapytania: tylko transakcje ZALOGOWANEGO użytkownika i tylko WYDATKI (kwoty ujemne)
+        $query = Transaction::where('user_id', auth()->id())
+                            ->where('amount', '<', 0);
 
-        if ($isPremium) {
-            // 1. Filtrowanie po nazwie kontrahenta lub tytule
-            if ($request->filled('search')) {
-                $query->where(function($q) use ($request) {
-                    $q->where('counterparty', 'like', '%' . $request->search . '%')
-                      ->orWhere('title', 'like', '%' . $request->search . '%');
-                });
-            }
-
-            // 2. Filtrowanie po zakresie dat
-            if ($request->filled('date_from')) {
-                $query->where('transaction_date', '>=', $request->date_from);
-            }
-            if ($request->filled('date_to')) {
-                $query->where('transaction_date', '<=', $request->date_to);
-            }
-
-            // 3. Dynamiczne sortowanie kompatybilne z widokiem (obsługa osobnych pól sort_by i order)
-            $sortField = $request->get('sort_by', 'transaction_date');
-            $sortOrder = $request->get('order', 'desc');
-            
-            if (in_array($sortField, ['transaction_date', 'amount', 'counterparty'])) {
-                if ($sortField === 'amount') {
-                    // Ponieważ wydatki są ujemne, odwracamy kierunek dla intuicyjnego sortowania
-                    $query->orderBy('amount', $sortOrder === 'desc' ? 'asc' : 'desc');
-                } else {
-                    $query->orderBy($sortField, $sortOrder);
-                }
-            }
-        } else {
-            // Domyślne sortowanie dla użytkowników bez Premium
-            $query->orderBy('transaction_date', 'desc');
+        // 2. Filtrowanie wyszukiwarki i dat
+        if ($request->filled('search')) {
+            $query->where('counterparty', 'like', '%' . $request->input('search') . '%');
+        }
+        if ($request->filled('date_from')) {
+            $query->where('transaction_date', '>=', $request->input('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->where('transaction_date', '<=', $request->input('date_to'));
         }
 
-        // Wyniki do głównej tabeli operacji
-        $transactions = $query->get();
+        // 3. Obsługa sortowania z formularza
+        $sortComposite = $request->input('sort_composite', 'transaction_date_desc');
+        switch ($sortComposite) {
+            case 'transaction_date_asc':
+                $query->orderBy('transaction_date', 'asc');
+                break;
+            case 'amount_desc':
+                $query->orderBy('amount', 'asc'); // Kwoty ujemne, więc im "niższa" liczba tym większy wydatek w bazie
+                break;
+            case 'amount_asc':
+                $query->orderBy('amount', 'desc');
+                break;
+            case 'transaction_date_desc':
+            default:
+                $query->orderBy('transaction_date', 'desc');
+                break;
+        }
 
-        // Wykres Top 5 największych wydatków
-        $chartStats = Transaction::where('user_id', $user->id)
+        // 4. Pobieranie danych przez elegancką i bezpieczną paginację Laravela
+        // z zachowaniem filtrów w adresie URL przy zmianie stron (withQueryString)
+        $transactions = $query->paginate($perPage)->withQueryString();
+
+        // 5. Statystyki do wykresu (Top 5 z całości danych bez wpływu podziału na strony tabeli)
+        $rawChartStats = Transaction::selectRaw('counterparty, amount')
+            ->where('user_id', auth()->id())
             ->where('amount', '<', 0)
-            ->selectRaw('counterparty, ABS(SUM(amount)) as total')
-            ->groupBy('counterparty')
-            ->orderByDesc('total')
-            ->take(5)
             ->get();
 
-        // Statystyki Trendów miesięcznych - dostosowane pod SQLite
-        $premiumStats = $isPremium ? [
-            'average_expense' => abs(Transaction::where('user_id', $user->id)->where('amount', '<', 0)->avg('amount') ?? 0),
-            'monthly_expenses' => Transaction::where('user_id', $user->id)
-                ->where('amount', '<', 0)
-                ->selectRaw("strftime('%Y-%m', transaction_date) as month, ABS(SUM(amount)) as total")
-                ->groupBy('month')
-                ->orderBy('month', 'desc')
-                ->get()
-        ] : null;
+        $chartStats = $rawChartStats->groupBy('counterparty')->map(function ($group) {
+            return (object) [
+                'counterparty' => $group->first()->counterparty,
+                'total' => $group->sum(function ($tx) {
+                    return abs($tx->amount); // abs() w PHP działa bezbłędnie na SQLite
+                })
+            ];
+        })->sortByDesc('total')->take(5);
 
-        return view('analytics', compact('chartStats', 'premiumStats', 'transactions'));
+        if ($chartStats->sum('total') == 0) {
+            $chartStats = collect();
+        }
+
+        // Zwrócenie widoku z wbudowaną paginacją przekazaną bezpośrednio w $transactions
+        return view('analytics', [
+            'transactions' => $transactions,
+            'chartStats' => $chartStats,
+            'premiumStats' => true
+        ]);
     }
 
     /**
@@ -155,12 +153,12 @@ class ProfileController extends Controller
         $request->validate([
             'counterparty' => 'required|string',
             'start_date' => 'required|date',
-            'months' => 'required|string', // Zmienione na string, by przyjąć wartość "1 miesiąc"
+            'months' => 'required',
         ]);
 
         $startDate = Carbon::parse($request->start_date);
         
-        // NAPRAWA TypeError: Wyciągamy samą cyfrę (np. "1") z tekstu "1 miesiąc"
+        // Wyciągamy samą cyfrę (np. "1") z tekstu "1 miesiąc", "3 mieś." itd.
         $monthsNumeric = (int) preg_replace('/[^0-9]/', '', $request->months);
 
         if ($monthsNumeric < 1) {
@@ -175,6 +173,6 @@ class ProfileController extends Controller
             ->whereBetween('transaction_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->delete();
 
-        return redirect()->back()->with('success', 'Pomyślnie zasymulowano rezygnację z subskrypcji. Określone płatności zostały usunięte z bazy danych.');
+        return redirect()->back()->with('with', 'success', 'Pomyślnie zasymulowano rezygnację z subskrypcji. Określone płatności zostały usunięte z bazy danych.');
     }
 }

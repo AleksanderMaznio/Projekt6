@@ -1,10 +1,11 @@
 <?php
 
-use App\Models\Subscription; 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportController;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 
 // 1. STRONA GŁÓWNA (Dla niezalogowanych)
@@ -12,35 +13,79 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// NOWOŚĆ: Trasa do trybu demonstracyjnego (Publiczna, bez logowania)
+Route::get('/demo', function () {
+    return view('demo');
+})->name('demo');
+
 // 2. DASHBOARD (Główny panel użytkownika)
 Route::get('/dashboard', function () {
-    // Pobieramy wszystkie transakcje zalogowanego użytkownika do historii transakcji
-    $transactions = Transaction::where('user_id', auth()->id())
+    $userId = auth()->id();
+
+    // 1. Pobieramy WSZYSTKIE transakcje zalogowanego użytkownika (Historia)
+    $transactions = Transaction::where('user_id', $userId)
                         ->orderBy('transaction_date', 'desc')
                         ->get();
 
-    // POPRAWKA: Pobieramy transakcje oznaczone jako subskrypcje (kwoty ujemne, z flagą is_subscription)
-    $subscriptions = Transaction::where('user_id', auth()->id())
-                        ->where('is_subscription', true)
-                        ->where('amount', '<', 0)
-                        ->orderBy('transaction_date', 'desc')
-                        ->get();
+    // AUTOMATYCZNY FALLBACK: Jeśli zalogowany użytkownik nie ma przypisanych transakcji,
+    // ładujemy dane demonstracyjne (user_id = null lub 0), aby panel od razu żył
+    if ($transactions->isEmpty()) {
+        $transactions = Transaction::whereNull('user_id')
+                            ->orWhere('user_id', 0)
+                            ->orderBy('transaction_date', 'desc')
+                            ->get();
+        
+        $transactionIds = $transactions->pluck('id')->toArray();
 
-    return view('dashboard', compact('transactions', 'subscriptions'));
+        // Subskrypcje (Kafelki) - Pobieramy te oznaczone jako subskrypcje bez względu na znak kwoty
+        $subscriptions = Transaction::whereIn('id', $transactionIds)
+                            ->when(Schema::hasColumn('transactions', 'is_subscription'), function ($query) {
+                                return $query->where('is_subscription', true);
+                            })
+                            ->orderBy('transaction_date', 'desc')
+                            ->get();
+
+        // Statystyki do wykresu struktury wydatków
+        $chartStats = Transaction::whereIn('id', $transactionIds)
+                            ->select('contractor as counterparty', DB::raw('SUM(ABS(amount)) as total'))
+                            ->groupBy('contractor')
+                            ->orderBy('total', 'desc')
+                            ->get();
+    } else {
+        // Jeśli użytkownik posiada już własne, zaimportowane dane:
+        
+        // Subskrypcje (Kafelki)
+        $subscriptions = Transaction::where('user_id', $userId)
+                            ->when(Schema::hasColumn('transactions', 'is_subscription'), function ($query) {
+                                return $query->where('is_subscription', true);
+                            })
+                            ->orderBy('transaction_date', 'desc')
+                            ->get();
+
+        // Statystyki do wykresu struktury wydatków
+        $chartStats = Transaction::where('user_id', $userId)
+                            ->select('contractor as counterparty', DB::raw('SUM(ABS(amount)) as total'))
+                            ->groupBy('contractor')
+                            ->orderBy('total', 'desc')
+                            ->get();
+    }
+
+    // Dodatkowe zabezpieczenie dla widoku przed dzieleniem przez zero, jeśli suma wydatków wynosi 0
+    if ($chartStats->sum('total') == 0) {
+        $chartStats = collect();
+    }
+
+    return view('dashboard', compact('transactions', 'subscriptions', 'chartStats'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // 3. ANALITYKA I ZARZĄDZANIE SUBSKRYPCJAMI (Przeniesione do ProfileController)
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Trasa wyświetlania analityki, filtrów i sortowania
-    Route::get('/analytics', [ProfileController::class, 'analytics'])->name('analytics');
-    
-    // Trasa POST obsługująca teoretyczną rezygnację z subskrypcji (kasowanie wierszy)
+    Route::match(['get', 'post'], '/analytics', [ProfileController::class, 'analytics'])->name('analytics');
     Route::post('/analytics/cancel-subscription', [ProfileController::class, 'cancelSubscription'])->name('subscription.cancel');
 });
 
 // 4. TRASY ZALOGOWANEGO UŻYTKOWNIKA (Profil i Import)
 Route::middleware('auth')->group(function () {
-    // Profil z Breeze
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
