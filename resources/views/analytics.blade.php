@@ -25,7 +25,8 @@
         </div>
     </x-slot>
    
-    <div class="py-6 bg-gray-50 dark:bg-gray-900 min-h-screen" x-data="{ openStats: false, openHistory: true }">
+    {{-- Stan Alpine.js: Sprawdzamy czy parametr select_sub jest w adresie URL, aby automatycznie rozwinąć sekcję wykresu --}}
+    <div class="py-6 bg-gray-50 dark:bg-gray-900 min-h-screen" x-data="{ openStats: {{ request('select_sub') ? 'true' : 'false' }}, openHistory: true }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
              
             {{-- Komunikat sukcesu --}}
@@ -76,7 +77,7 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         
-                        {{-- TOP 5 NAJWIĘKSZYCH WYDATKÓW (Dostępne dla każdego) --}}
+                        {{-- TOP 5 NAJWIĘKSZYCH WYDATKÓW --}}
                         <div class="lg:col-span-2 relative overflow-hidden flex flex-col justify-between">
                             <div>
                                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Top 5 Największych Wydatków (% pełnej kwoty)</h3>
@@ -110,7 +111,7 @@
                             </div>
                         </div>
 
-                        {{-- ANULOWANIE SUBSKRYPCJI (Zablokowane nakładką, jeśli brak Premium) --}}
+                        {{-- ANULOWANIE SUBSKRYPCJI --}}
                         <div class="border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-gray-700 pt-4 lg:pt-0 lg:pl-4 relative overflow-hidden flex flex-col justify-between">
                             @if(!$premiumStats)
                                 <div class="absolute inset-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-[1px] flex items-center justify-center z-10 text-center p-4 rounded-xl">
@@ -137,7 +138,10 @@
                                         <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tight mb-0.5">Subskrypcja</label>
                                         <select name="counterparty" class="w-full text-xs py-1 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500" required>
                                             @foreach($chartStats as $stat)
-                                                <option value="{{ $stat->counterparty }}">{{ $stat->counterparty }}</option>
+                                                {{-- Automatyczne zaznaczanie opcji przekazanej z poziomu parametru URL --}}
+                                                <option value="{{ $stat->counterparty }}" {{ request('select_sub') == $stat->counterparty ? 'selected' : '' }}>
+                                                    {{ $stat->counterparty }}
+                                                </option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -189,7 +193,7 @@
                                 <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tight mb-0.5">Nazwa operacji</label>
                                 <div class="relative">
                                     <input type="text" name="search" value="{{ request('search') }}" placeholder="Szukaj..." 
-                                        class="w-full text-xs pl-6 pr-2 py-1.5 border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-medium focus:bg-white dark:focus:bg-gray-900 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                                        class="w-full text-xs pl-6 pr-2 py-1.5 border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-medium focus:bg-white dark:focus:bg-gray-900 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                                     <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
                                         <svg class="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -276,11 +280,15 @@
                                             <span>{{ $transaction->amount < 0 ? '-' : '+' }}{{ number_format(abs($transaction->amount), 2, ',', ' ') }}</span> 
                                             <span class="text-[10px] text-gray-500 font-normal">{{ $transaction->currency }}</span>
                                         </td>
+                                        
+                                        {{-- AKCJA Z DUŻYM CZERWONYM PRZYCISKIEM X (ZAMIAST STAREGO MARKERU SUB) --}}
                                         <td class="px-4 py-2.5 text-center whitespace-nowrap">
                                             <form method="POST" action="{{ route('transaction.toggle-subscription', $transaction->id) }}">
                                                 @csrf
-                                                <button type="submit" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold transition border {{ $transaction->is_subscription ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950 dark:text-indigo-400 dark:border-indigo-800 hover:bg-indigo-100' : 'bg-white text-gray-600 border-gray-300 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700 hover:bg-gray-50' }}">
-                                                    {{ $transaction->is_subscription ? '★ Sub' : '☆ Oznacz' }}
+                                                <button type="submit" 
+                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-black transition shadow-sm border {{ $transaction->is_subscription ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200' }}"
+                                                        title="{{ $transaction->is_subscription ? 'Usuń z subskrypcji' : 'Dodaj do subskrypcji' }}">
+                                                    ✕
                                                 </button>
                                             </form>
                                         </td>
@@ -324,7 +332,6 @@
         try {
             const ctx = canvas.getContext('2d');
             
-           
             const rawData = {!! json_encode($chartData ?? [
                 'labels' => [], 
                 'total' => [], 
