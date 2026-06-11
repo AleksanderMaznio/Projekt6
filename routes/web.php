@@ -24,63 +24,6 @@ Route::get('/demo', function () {
     return view('demo');
 })->name('demo');
 
-Route::get('/dashboard', function () {
-    $userId = auth()->id();
-
-    
-    $transactions = Transaction::where('user_id', $userId)
-                        ->orderBy('transaction_date', 'desc')
-                        ->get();
-
-   
-    if ($transactions->isEmpty()) {
-        $transactions = Transaction::whereNull('user_id')
-                            ->orWhere('user_id', 0)
-                            ->orderBy('transaction_date', 'desc')
-                            ->get();
-        
-        $transactionIds = $transactions->pluck('id')->toArray();
-
-       
-        $subscriptions = Transaction::whereIn('id', $transactionIds)
-                            ->when(Schema::hasColumn('transactions', 'is_subscription'), function ($query) {
-                                return $query->where('is_subscription', true);
-                            })
-                            ->orderBy('transaction_date', 'desc')
-                            ->get();
-
-        
-        $chartStats = Transaction::whereIn('id', $transactionIds)
-                            ->select('contractor as counterparty', DB::raw('SUM(ABS(amount)) as total'))
-                            ->groupBy('contractor')
-                            ->orderBy('total', 'desc')
-                            ->get();
-    } else {
-      
-        
-       
-        $subscriptions = Transaction::where('user_id', $userId)
-                            ->when(Schema::hasColumn('transactions', 'is_subscription'), function ($query) {
-                                return $query->where('is_subscription', true);
-                            })
-                            ->orderBy('transaction_date', 'desc')
-                            ->get();
-
-        
-        $chartStats = Transaction::where('user_id', $userId)
-                            ->select('contractor as counterparty', DB::raw('SUM(ABS(amount)) as total'))
-                            ->groupBy('contractor')
-                            ->orderBy('total', 'desc')
-                            ->get();
-    }
-
-
-    if ($chartStats->sum('total') == 0) {
-        $chartStats = collect();
-    }
-
-    return view('dashboard', compact('transactions', 'subscriptions', 'chartStats'));
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 
 Route::middleware(['auth', 'verified'])->group(function () {
