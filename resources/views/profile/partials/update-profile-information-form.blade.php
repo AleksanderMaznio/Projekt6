@@ -11,12 +11,30 @@
 
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
         @csrf
-    </form>
+    </form>  
+    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6" enctype="multipart/form-data">
+            @csrf   
+    @method('patch')
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
-        @csrf
-        @method('patch')
+    <div class="mt-4">
+    @if($user->avatar && file_exists(public_path('storage/' . $user->avatar)))
+    <img src="{{ asset('storage/' . $user->avatar) }}" class="w-20 h-20 rounded-full object-cover">
+@else
+    <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
+        <img src="{{ asset('images/wallet-svgrepo-com.svg') }}" class="w-12 h-12" alt="Logo">
+    </div>
+@endif
+<a href="{{ asset('images/wallet-svgrepo-com.svg') }}" target="_blank">
 
+    <input id="avatar" name="avatar" type="file" class="mt-1 block w-full text-sm text-gray-500
+        file:mr-4 file:py-2 file:px-4
+        file:rounded-full file:border-0
+        file:text-sm file:font-semibold
+        file:bg-indigo-50 file:text-indigo-700
+        hover:file:bg-indigo-100" 
+    />
+    <x-input-error class="mt-2" :messages="$errors->get('avatar')" />
+    </div>
         <div>
             <x-input-label for="name" :value="__('Name')" />
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />

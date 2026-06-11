@@ -19,7 +19,7 @@
                     </thead>
                     <tbody>
                         @foreach($users as $user)
-                        <tr>
+                        <tr>    
                             <td class="border-b p-2">{{ $user->id }}</td>
                             <td class="border-b p-2">{{ $user->name }}</td>
                             <td class="border-b p-2">{{ $user->email }}</td>
@@ -34,7 +34,11 @@
                                     @endif
                                 </div>
                             </td>
+                            
                             <td class="border-b p-2 text-right">
+                                <a href="{{ route('admin.users.show', $user) }}" class="text-purple-600 hover:underline">
+            Podgląd
+        </a>
                                 <div class="flex gap-3 justify-end items-center h-6"> 
                                     <a href="{{ route('admin.users.edit', $user) }}" class="text-blue-500 hover:underline">Edytuj</a>
                                     <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="inline">

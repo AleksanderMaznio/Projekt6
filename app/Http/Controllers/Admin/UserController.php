@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
+    public function show(User $user) {
+    $transactions = $user->transactions()->orderBy('transaction_date', 'desc')->paginate(50);
+    return view('admin.users.show', compact('user', 'transactions'));
+}
     public function index()
     {
         $users = User::orderBy('id', 'desc')->get();

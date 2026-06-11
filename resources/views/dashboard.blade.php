@@ -98,7 +98,38 @@
                     @endif
                 </div>
             </div>
+{{-- SEKCJA PREMIUM --}}
+@if(auth()->user()->is_premium)
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl border border-gray-200 dark:border-indigo-500/30">
+    <div class="p-8 relative">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-amber-500"></div>
 
+        <div class="flex items-center gap-4 mb-6">
+            <div class="flex justify-center items-center w-12 h-12 bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-full">
+                <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <div>
+                <h3 class="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">Strefa Premium</h3>
+                <p class="text-gray-600 dark:text-indigo-200 text-sm">Masz dostęp do zaawansowanych funkcji analitycznych.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-gray-50 dark:bg-white/5 p-4 rounded-xl border border-gray-200 dark:border-white/10">
+                <p class="text-sm text-gray-500 dark:text-indigo-300">Prognoza wydatków</p>
+                <p class="text-xl font-bold text-gray-900 dark:text-white mt-1">Dostępna</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-white/5 p-4 rounded-xl border border-gray-200 dark:border-white/10">
+                <p class="text-sm text-gray-500 dark:text-indigo-300">Eksport raportów</p>
+                <p class="text-xl font-bold text-gray-900 dark:text-white mt-1">Nielimitowany</p>
+            </div>
+            <a href="{{ route('analytics') }}" class="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all">
+                Pełna Analityka
+            </a>
+        </div>
+    </div>
+</div>
+@endif
             {{-- HISTORIA TRANSAKCJI --}}
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-2xl border border-gray-100 dark:border-gray-700">
                 <div class="p-8 text-gray-900 dark:text-gray-100 relative">

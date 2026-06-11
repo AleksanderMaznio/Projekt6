@@ -58,4 +58,8 @@ public function isPremium(): bool
 {
     return (bool) $this->is_premium;
 }
+public function transactions()
+{
+    return $this->hasMany(Transaction::class);
+}   
 }

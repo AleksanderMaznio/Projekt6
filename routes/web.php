@@ -7,7 +7,13 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\DashboardController;
 
+
+
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth'])
+    ->name('dashboard');
 // 1. STRONA GŁÓWNA (Dla niezalogowanych)
 Route::get('/', function () {
     return view('welcome');

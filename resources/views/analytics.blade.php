@@ -24,11 +24,10 @@
             </div>
         </div>
     </x-slot>
-
-    {{-- Dodane stany openStats (wykres) i openHistory (tabela) dla Alpine.js --}}
+   
     <div class="py-6 bg-gray-50 dark:bg-gray-900 min-h-screen" x-data="{ openStats: false, openHistory: true }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
-            
+             
             {{-- Komunikat sukcesu --}}
             @if(session('success'))
                 <div class="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 px-4 py-2.5 rounded-xl shadow-sm text-xs font-semibold">
@@ -51,9 +50,33 @@
                 </div>
 
                 <div x-show="openStats" x-collapse x-transition class="p-4 border-t border-gray-100 dark:border-gray-700" style="display: none;">
+                    
+                    {{-- SEKCJA DYNAMICZNA: WYKRES LINIOWY LUB BLOKADA PREMIUM --}}
+                    <div class="mb-6">
+                        @if($premiumStats)
+                            <div class="bg-gray-50 dark:bg-gray-900/30 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Analiza wydatków w czasie (Historia & Prognoza)</h3>
+                                <div style="position: relative; height: 320px; width: 100%;">
+                                    <canvas id="myUltimatePremiumChart"></canvas>
+                                </div>
+                            </div>
+                        @else
+                            <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-6 rounded-xl text-center border border-dashed border-gray-300 dark:border-gray-600">
+                                <div class="text-3xl mb-2">🔒</div>
+                                <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Zaawansowana analityka i prognozy liniowe</h3>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-3">
+                                    Statystyczne prognozy wydatków na kolejne miesiące oraz zaawansowane osie czasu są dostępne wyłącznie dla użytkowników posiadających konto <span class="text-amber-500 font-bold">Premium</span>.
+                                </p>
+                                <a href="#" class="inline-block bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-1.5 rounded-lg transition shadow-sm text-xs">
+                                    Uaktualnij do Premium
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         
-                        {{-- WYKRES PIONOWY --}}
+                        {{-- TOP 5 NAJWIĘKSZYCH WYDATKÓW (Dostępne dla każdego) --}}
                         <div class="lg:col-span-2 relative overflow-hidden flex flex-col justify-between">
                             <div>
                                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Top 5 Największych Wydatków (% pełnej kwoty)</h3>
@@ -87,9 +110,9 @@
                             </div>
                         </div>
 
-                        {{-- ANULOWANIE SUBSKRYPCJI --}}
+                        {{-- ANULOWANIE SUBSKRYPCJI (Zablokowane nakładką, jeśli brak Premium) --}}
                         <div class="border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-gray-700 pt-4 lg:pt-0 lg:pl-4 relative overflow-hidden flex flex-col justify-between">
-                            @if(is_null($premiumStats))
+                            @if(!$premiumStats)
                                 <div class="absolute inset-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-[1px] flex items-center justify-center z-10 text-center p-4 rounded-xl">
                                     <div class="bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                                         <span class="text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">PRO</span>
@@ -144,10 +167,9 @@
                 </div>
             </div>
 
-            {{-- PANEL 2: NOWOŚĆ - CAŁA HISTORIA TRANSAKCJI WRAZ Z FILTRAMI (ZWIJANA) --}}
+            {{-- PANEL 2: CAŁA HISTORIA TRANSAKCJI WRAZ Z FILTRAMI (ZWIJANA) --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                 
-                {{-- NAGŁÓWEK SŁUŻĄCY JAKO PRZYCISK ZWIJANIA/ROZWIJANIA TABELI --}}
                 <div @click="openHistory = !openHistory" class="p-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/40 transition-colors select-none">
                     <div class="flex items-center gap-2">
                         <div class="flex justify-center items-center w-6 h-6 bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 rounded-full">
@@ -158,7 +180,6 @@
                     <span class="text-[11px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-2 py-0.5 rounded-md" x-text="openHistory ? '✕ Ukryj historię' : '👁 Pokaż historię'"></span>
                 </div>
 
-                {{-- KONTENER PODLEGAJĄCY ROZWIJANIU --}}
                 <div x-show="openHistory" x-collapse x-transition>
                     
                     {{-- PASEK FILTRÓW --}}
@@ -285,4 +306,94 @@
 
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bezpiecznik: sprawdzamy istnienie płótna wykresu (wyrenderuje się tylko dla Premium)
+        const canvas = document.getElementById('myUltimatePremiumChart');
+        if (!canvas) {
+            return; // Kończymy dyskretnie działanie, jeśli zalogowany jest zwykły użytkownik
+        }
+
+        if (typeof Chart === 'undefined') {
+            console.error("Błąd: Biblioteka Chart.js nie została prawidłowo załadowana.");
+            return;
+        }
+
+        try {
+            const ctx = canvas.getContext('2d');
+            
+            // Pobieranie danych z backendu z pełnym fallbackiem struktury na wypadek braku zmiennych
+            const rawData = {!! json_encode($chartData ?? [
+                'labels' => [], 
+                'total' => [], 
+                'no_subs' => [], 
+                'forecast_total' => [], 
+                'forecast_no_subs' => []
+            ]) !!};
+
+            if (window.ultimateChartInstance) {
+                window.ultimateChartInstance.destroy();
+            }
+
+            window.ultimateChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: rawData.labels,
+                    datasets: [
+                        {
+                            label: 'Wydatki całkowite (Historia)',
+                            data: rawData.total,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Wydatki całkowite (Prognoza)',
+                            data: rawData.forecast_total,
+                            borderColor: '#f97316',
+                            borderDash: [6, 6],
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Bez subskrypcji (Historia)',
+                            data: rawData.no_subs,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Bez subskrypcji (Prognoza)',
+                            data: rawData.forecast_no_subs,
+                            borderColor: '#a855f7',
+                            borderDash: [6, 6],
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error("Wystąpił błąd podczas inicjalizacji wykresu:", error);
+        }
+    });
+    </script>
 </x-app-layout>
