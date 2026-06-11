@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\ImportedFile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Response;
 use Illuminate\View\View;
 use App\Models\Transaction; 
 use Carbon\Carbon;          
@@ -20,6 +22,7 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'importedFiles' => $request->user()->importedFiles()->latest()->get(),
         ]);
     }
 
@@ -67,6 +70,63 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    public function destroyImportedFile(ImportedFile $importedFile): RedirectResponse
+    {
+        abort_unless($importedFile->user_id === auth()->id(), 403);
+
+        $importedFile->transactions()->delete();
+        $importedFile->delete();
+
+        return Redirect::route('profile.edit')->with('status', 'import-deleted');
+    }
+
+    public function exportSubscriptions(Request $request)
+    {
+        $query = Transaction::where('user_id', auth()->id())
+            ->where('is_subscription', true);
+
+        if ($request->filled('search')) {
+            $query->where('counterparty', 'like', '%' . $request->input('search') . '%');
+        }
+        if ($request->filled('date_from')) {
+            $query->where('transaction_date', '>=', $request->input('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->where('transaction_date', '<=', $request->input('date_to'));
+        }
+
+        $subscriptions = $query->orderBy('transaction_date', 'desc')->get();
+
+        $rows = [];
+        $rows[] = ['Data', 'Kontrahent', 'Tytuł', 'Kwota', 'Waluta'];
+
+        foreach ($subscriptions as $subscription) {
+            $rows[] = [
+                $subscription->transaction_date,
+                $subscription->counterparty,
+                $subscription->title,
+                number_format($subscription->amount, 2, '.', ''),
+                $subscription->currency,
+            ];
+        }
+
+        $filename = 'subskrypcje-' . now()->format('Y-m-d-H-i-s') . '.csv';
+        $handle = fopen('php://temp', 'r+');
+
+        foreach ($rows as $row) {
+            fputcsv($handle, $row, ';');
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return Response::make($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     /**

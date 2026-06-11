@@ -61,5 +61,10 @@ public function isPremium(): bool
 public function transactions()
 {
     return $this->hasMany(Transaction::class);
-}   
 }
+
+public function importedFiles()
+{
+    return $this->hasMany(ImportedFile::class);
+}
+} 

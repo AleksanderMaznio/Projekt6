@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ImportedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use App\Models\Transaction;
@@ -17,6 +18,11 @@ class ImportController extends Controller
 
         // 2. Pobieramy plik
         $file = $request->file('csv_file');
+
+        $importedFile = ImportedFile::create([
+            'user_id' => auth()->id(),
+            'file_name' => $file->getClientOriginalName(),
+        ]);
 
         // 3. Otwieramy plik i mapujemy go wiersz po wierszu
         $data = array_map('str_getcsv', file($file->getRealPath()));
@@ -41,7 +47,8 @@ class ImportController extends Controller
                     // Jeśli nie istnieje, uzupełniamy brakujące dane i tworzymy nowy rekord w bazie
                     'currency' => $row[2],
                     'counterparty' => $row[4],
-                    'is_subscription' => false
+                    'is_subscription' => false,
+                    'imported_file_id' => $importedFile->id,
                 ]
             );
         }

@@ -28,6 +28,7 @@ Route::get('/demo', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::match(['get', 'post'], '/analytics', [ProfileController::class, 'analytics'])->name('analytics');
+    Route::get('/analytics/export-subscriptions', [ProfileController::class, 'exportSubscriptions'])->name('analytics.export-subscriptions');
     Route::post('/analytics/cancel-subscription', [ProfileController::class, 'cancelSubscription'])->name('subscription.cancel');
 });
 
@@ -36,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::delete('/profile/imports/{importedFile}', [ProfileController::class, 'destroyImportedFile'])->name('profile.imports.destroy');
     Route::post('/analytics/toggle-subscription/{id}', [ProfileController::class, 'toggleSubscription'])->name('transaction.toggle-subscription');
 
   
