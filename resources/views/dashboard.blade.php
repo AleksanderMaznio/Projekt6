@@ -36,6 +36,13 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
             
+            @if(session('success'))
+                <div class="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-xl shadow-sm text-sm font-medium">
+                    {{ session('success') }}
+                </div>
+            @endif
+            
+            {{-- SEKCJA AKTYWNYCH SUBSKRYPCJI --}}
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-2xl border border-gray-100 dark:border-gray-700">
                 <div class="p-8 text-gray-900 dark:text-gray-100 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
@@ -51,25 +58,40 @@
                         <div class="text-center py-6">
                             <p class="text-gray-500 dark:text-gray-400 text-lg">System nie wykrył jeszcze żadnych powtarzalnych płatności.</p>
                         </div>
-                    @elseif(isset($subscriptions))
+                    @endif
+
+                    @if(isset($subscriptions) && !$subscriptions->isEmpty())
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             @foreach($subscriptions as $sub)
-                                <div class="p-5 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm bg-gray-50 dark:bg-gray-900 relative group transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-                                    <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-bl-full rounded-tr-xl -z-10 transition-all group-hover:scale-150"></div>
-                                    
-                                    <h4 class="font-bold text-lg uppercase tracking-wider text-gray-800 dark:text-gray-200 truncate" title="{{ $sub->counterparty }}">
-                                        {{ $sub->counterparty }}
-                                    </h4>
-                                    <p class="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{{ $sub->title }}</p>
+                                <div class="relative group">
+                                    {{-- Kliknięcie w kafelek przenosi do analityki z wybraną subskrypcją --}}
+                                    <a href="{{ route('analytics', ['select_sub' => $sub->counterparty]) }}" class="p-5 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm bg-gray-50 dark:bg-gray-900 relative transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md block z-10">
+                                        <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-bl-full rounded-tr-xl -z-10 transition-all group-hover:scale-150"></div>
+                                        
+                                        <h4 class="font-bold text-lg uppercase tracking-wider text-gray-800 dark:text-gray-200 truncate pr-6" title="{{ $sub->counterparty }}">
+                                            {{ $sub->counterparty }}
+                                        </h4>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{{ $sub->title }}</p>
 
-                                    <p class="text-3xl font-extrabold mt-3 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-500">
-                                        -{{ number_format(abs($sub->amount), 2, ',', ' ') }} <span class="text-sm text-gray-400">{{ $sub->currency }}</span>
-                                    </p>
-                                    
-                                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-3 flex items-center gap-1">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                        Ostatnia: {{ $sub->transaction_date }}
-                                    </p>
+                                        <p class="text-3xl font-extrabold mt-3 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-500">
+                                            -{{ number_format(abs($sub->amount), 2, ',', ' ') }} <span class="text-sm text-gray-400">{{ $sub->currency }}</span>
+                                        </p>
+                                        
+                                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-3 flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                            Ostatnia: {{ $sub->transaction_date }}
+                                        </p>
+                                    </a>
+
+                                    {{-- Dyskretny, wtopiony przycisk X do natychmiastowego usunięcia --}}
+                                    <div class="absolute top-3 right-3 z-20">
+                                        <form action="{{ route('transaction.toggle-subscription', $sub->id) }}" method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć tę transakcję z listy subskrypcji?');">
+                                            @csrf
+                                            <button type="submit" class="flex items-center justify-center w-6 h-6 text-red-500/40 dark:text-red-400/30 hover:text-white hover:bg-red-600 dark:hover:bg-red-600 font-black text-xs rounded-md transition-all duration-200" title="Usuń z subskrypcji">
+                                                ✕
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>
@@ -77,6 +99,7 @@
                 </div>
             </div>
 
+            {{-- HISTORIA TRANSAKCJI --}}
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-2xl border border-gray-100 dark:border-gray-700">
                 <div class="p-8 text-gray-900 dark:text-gray-100 relative">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
@@ -131,7 +154,6 @@
                             </div>
                         </div>
                     @endif
-
                 </div>
             </div>
 
