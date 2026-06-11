@@ -18,7 +18,7 @@
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">System automatycznie wyłapie ukryte subskrypcje.</p>
                     </div>
 
-                    <form action="/import" method="POST" enctype="multipart/form-data" class="space-y-5">
+                    <form id="import-form" action="/import" method="POST" enctype="multipart/form-data" class="space-y-5">
                         @csrf 
                         
                         <div class="flex justify-center w-full">
@@ -30,9 +30,11 @@
                                     <p class="mb-1 text-base text-gray-500 dark:text-gray-400"><span class="font-semibold">Wybierz plik</span> lub przeciągnij</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-500 uppercase tracking-widest">.CSV (max. 2MB)</p>
                                 </div>
-                                <input id="dropzone-file" type="file" name="csv_file" accept=".csv" class="hidden" required />
+                                <input id="dropzone-file" type="file" name="csv_file" accept=".csv,text/csv" class="hidden" required />
                             </label>
                         </div>
+
+                        <p id="file-help" class="text-center text-sm text-gray-500 dark:text-gray-400">Dozwolony jest tylko plik CSV.</p>
                         
                         <div class="flex justify-center mt-5">
                             <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 w-full">
@@ -47,10 +49,48 @@
     </div>
 
     <script>
-        document.getElementById('dropzone-file').addEventListener('change', function(e) {
-            let fileName = e.target.files[0].name;
-            let textElement = this.parentElement.querySelector('p.text-base');
-            textElement.innerHTML = `<span class="font-semibold text-indigo-500">Wybrano:</span> ${fileName}`;
+        const fileInput = document.getElementById('dropzone-file');
+        const importForm = document.getElementById('import-form');
+        const fileHelp = document.getElementById('file-help');
+
+        const setFileHelp = (message, isError = false) => {
+            fileHelp.textContent = message;
+            fileHelp.className = isError
+                ? 'text-center text-sm text-red-500 dark:text-red-400'
+                : 'text-center text-sm text-gray-500 dark:text-gray-400';
+        };
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const textElement = this.parentElement.querySelector('p.text-base');
+
+            if (!file) {
+                textElement.innerHTML = '<span class="font-semibold">Wybierz plik</span> lub przeciągnij';
+                setFileHelp('Dozwolony jest tylko plik CSV.');
+                return;
+            }
+
+            const isCsv = file.name.toLowerCase().endsWith('.csv') || file.type.includes('csv');
+
+            if (!isCsv) {
+                this.value = '';
+                textElement.innerHTML = '<span class="font-semibold">Wybierz plik</span> lub przeciągnij';
+                setFileHelp('Nieprawidłowy typ pliku. Wgraj wyłącznie plik CSV.', true);
+                return;
+            }
+
+            textElement.innerHTML = `<span class="font-semibold text-indigo-500">Wybrano:</span> ${file.name}`;
+            setFileHelp('Plik gotowy do importu.');
+        });
+
+        importForm.addEventListener('submit', function(e) {
+            const file = fileInput.files[0];
+            const isCsv = file && (file.name.toLowerCase().endsWith('.csv') || file.type.includes('csv'));
+
+            if (!isCsv) {
+                e.preventDefault();
+                setFileHelp('Nieprawidłowy typ pliku. Wgraj wyłącznie plik CSV.', true);
+            }
         });
     </script>
 </x-app-layout>

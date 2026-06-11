@@ -12,7 +12,7 @@ class ImportController extends Controller
     {
         // 1. Walidacja
         $request->validate([
-            'csv_file' => 'required|mimes:csv,txt|max:2048'
+            'csv_file' => 'required|file|mimetypes:text/csv|max:2048'
         ]);
 
         // 2. Pobieramy plik
