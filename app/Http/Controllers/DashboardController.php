@@ -32,7 +32,7 @@ class DashboardController extends Controller
         'no_subs' => $data->pluck('spent_without_subs')
     ];
 
-    // Pobieramy pozostałe dane
+    
     $subscriptions = \App\Models\Transaction::where('user_id', $userId)
         ->where('is_subscription', true)
         ->orderBy('transaction_date', 'desc')
@@ -52,6 +52,7 @@ class DashboardController extends Controller
                 'transaction_date' => $latest->transaction_date,
             ];
         })
+        
         ->values();
 
     $transactions = \App\Models\Transaction::where('user_id', $userId)->latest()->get();
