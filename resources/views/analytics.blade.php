@@ -25,18 +25,25 @@
         </div>
     </x-slot>
    
-    {{-- Stan Alpine.js: Sprawdzamy czy parametr select_sub jest w adresie URL, aby automatycznie rozwinąć sekcję wykresu --}}
-    <div class="py-6 bg-gray-50 dark:bg-gray-900 min-h-screen" x-data="{ openStats: {{ request('select_sub') ? 'true' : 'false' }}, openHistory: true }">
+    <div class="py-6 bg-gray-50 dark:bg-gray-900 min-h-screen" x-data="{ openStats: {{ request('select_sub') ? 'true' : 'false' }}, openPremiumHub: false, openHistory: true }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
              
-            {{-- Komunikat sukcesu --}}
             @if(session('success'))
                 <div class="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 px-4 py-2.5 rounded-xl shadow-sm text-xs font-semibold">
                     {{ session('success') }}
                 </div>
             @endif
 
-            {{-- PANEL 1: WYKRES ANALIZY I SUBSKRYPCJI (ZWIJANY) --}}
+            @php
+                // Wyliczamy czyste sumy z widocznych na stronie transakcji
+                $totalExpensesSum = abs($transactions->filter(function ($t) { return $t->amount < 0; })->sum('amount'));
+                $totalSubsSum = abs($transactions->filter(function ($t) { 
+                    return $t->amount < 0 && ($t->is_subscription || (isset($t->is_subscription) && $t->is_subscription == 1)); 
+                })->sum('amount'));
+                $nonSubsSum = max($totalExpensesSum - $totalSubsSum, 0);
+            @endphp
+
+            {{-- PANEL 1: WYKRES ANALIZY I SUBSKRYPCJI --}}
             <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden transition-all duration-300">
                 <div @click="openStats = !openStats" class="p-3.5 bg-gray-50/80 dark:bg-gray-900/40 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors select-none">
                     <div class="flex items-center gap-2">
@@ -52,13 +59,46 @@
 
                 <div x-show="openStats" x-collapse x-transition class="p-4 border-t border-gray-100 dark:border-gray-700" style="display: none;">
                     
-                    {{-- SEKCJA DYNAMICZNA: WYKRES LINIOWY LUB BLOKADA PREMIUM --}}
                     <div class="mb-6">
                         @if($premiumStats)
-                            <div class="bg-gray-50 dark:bg-gray-900/30 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Analiza wydatków w czasie (Historia & Prognoza)</h3>
-                                <div style="position: relative; height: 320px; width: 100%;">
-                                    <canvas id="myUltimatePremiumChart"></canvas>
+                            <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+                                <div class="xl:col-span-3 bg-gray-50 dark:bg-gray-900/30 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Analiza wydatków w czasie (Historia & Prognoza)</h3>
+                                    <div style="position: relative; height: 320px; width: 100%;">
+                                        <canvas id="myUltimatePremiumChart"></canvas>
+                                    </div>
+                                </div>
+
+                                {{-- PODSUMOWANIE WIDOKU WYDATKÓW --}}
+                                <div class="bg-gradient-to-br from-gray-900 via-slate-950 to-indigo-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-between text-white relative overflow-hidden">
+                                    <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl"></div>
+                                    <div>
+                                        <span class="text-[9px] bg-slate-800 text-slate-200 font-extrabold px-2 py-0.5 rounded border border-slate-700 uppercase tracking-wider">Bieżący widok</span>
+                                        <h4 class="text-sm font-bold text-gray-100 mt-3">Koszyk kosztów</h4>
+                                        <p class="text-xs text-slate-300 mt-0.5 leading-relaxed">Podsumowanie wydatków z transakcji wyświetlanych poniżej.</p>
+                                        
+                                        <div class="mt-4 space-y-2 text-xs">
+                                            <div class="flex justify-between border-b border-white/10 pb-1">
+                                                <span class="text-gray-300">Wszystkie wydatki:</span>
+                                                <span class="font-bold text-gray-100">{{ number_format($totalExpensesSum, 2, ',', ' ') }} zł</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-white/10 pb-1">
+                                                <span class="text-indigo-300 font-bold">W tym subskrypcje:</span>
+                                                <span class="font-bold text-indigo-300">{{ number_format($totalSubsSum, 2, ',', ' ') }} zł</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-4">
+                                            <p class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Roczna prognoza stałych usług</p>
+                                            <div class="text-2xl font-black text-amber-400">
+                                                {{ number_format($totalSubsSum * 12, 2, ',', ' ') }} zł
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4 pt-3 border-t border-white/10 text-[10px] text-slate-300 font-medium">
+                                        Zmień filtry na dole strony, aby zaktualizować statystyki.
+                                    </div>
                                 </div>
                             </div>
                         @else
@@ -76,8 +116,6 @@
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        
-                        {{-- TOP 5 NAJWIĘKSZYCH WYDATKÓW --}}
                         <div class="lg:col-span-2 relative overflow-hidden flex flex-col justify-between">
                             <div>
                                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Top 5 Największych Wydatków (% pełnej kwoty)</h3>
@@ -111,7 +149,6 @@
                             </div>
                         </div>
 
-                        {{-- ANULOWANIE SUBSKRYPCJI --}}
                         <div class="border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-gray-700 pt-4 lg:pt-0 lg:pl-4 relative overflow-hidden flex flex-col justify-between">
                             @if(!$premiumStats)
                                 <div class="absolute inset-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-[1px] flex items-center justify-center z-10 text-center p-4 rounded-xl">
@@ -138,7 +175,6 @@
                                         <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tight mb-0.5">Subskrypcja</label>
                                         <select name="counterparty" class="w-full text-xs py-1 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500" required>
                                             @foreach($chartStats as $stat)
-                                                {{-- Automatyczne zaznaczanie opcji przekazanej z poziomu parametru URL --}}
                                                 <option value="{{ $stat->counterparty }}" {{ request('select_sub') == $stat->counterparty ? 'selected' : '' }}>
                                                     {{ $stat->counterparty }}
                                                 </option>
@@ -166,14 +202,63 @@
                                 </form>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
 
-            {{-- PANEL 2: CAŁA HISTORIA TRANSAKCJI WRAZ Z FILTRAMI (ZWIJANA) --}}
+            {{-- PANEL PREMIUM: WYKRESY STRUKTURY SUBSKRYPCJI --}}
+            <div class="bg-white dark:bg-gray-800 border border-amber-200/60 dark:border-amber-900/40 shadow-sm rounded-xl overflow-hidden transition-all duration-300">
+                <div @click="openPremiumHub = !openPremiumHub" class="p-3.5 bg-gradient-to-r from-amber-50/50 via-white to-orange-50/30 dark:from-amber-950/20 dark:via-gray-800 dark:to-gray-900 flex items-center justify-between cursor-pointer hover:bg-amber-100/30 dark:hover:bg-gray-700/50 transition-colors select-none">
+                    <div class="flex items-center gap-2">
+                        <div class="flex justify-center items-center w-6 h-6 bg-amber-500 text-white rounded-full text-xs font-bold">
+                            ★
+                        </div>
+                        <span class="text-xs font-extrabold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Zaawansowana Wizualizacja Usług Stałych</span>
+                        <span class="text-[9px] bg-amber-500 text-white px-1.5 py-0.2 rounded font-black tracking-tight uppercase">Strefa Pro</span>
+                    </div>
+                    <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/60 px-2 py-0.5 rounded-md" x-text="openPremiumHub ? '✕ Schowaj wykresy' : '⚡ Otwórz wykresy'"></span>
+                </div>
+
+                <div x-show="openPremiumHub" x-collapse x-transition class="p-5 border-t border-gray-100 dark:border-gray-700 bg-slate-50/50 dark:bg-slate-900/20" style="display: none;">
+                    @if($premiumStats)
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            {{-- Wykres 1: Podział kwotowy aktywnych subskrypcji --}}
+                            <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Udział usług w budżecie abonamentowym</h4>
+                                <div class="relative h-64 flex justify-center items-center">
+                                    <canvas id="premiumDoughnutChart"></canvas>
+                                </div>
+                            </div>
+
+                            {{-- Wykres 2: Procentowy podział Subskrypcje vs Reszta wydatków --}}
+                            <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Porównanie obciążenia: Subskrypcje vs Transakcje jednorazowe</h4>
+                                <div class="relative h-64 flex justify-center items-center">
+                                    <canvas id="premiumRatioBarChart"></canvas>
+                                </div>
+                            </div>
+
+                        </div>
+                    @else
+                        <div class="text-center py-6">
+                            <div class="inline-flex justify-center items-center w-12 h-12 bg-amber-50 text-amber-500 border border-amber-200 rounded-full text-xl mb-3 font-bold">
+                                💎
+                            </div>
+                            <h3 class="text-sm font-bold text-gray-800 dark:text-white mb-1">Struktura Kosztów Stałych & Wykresy Zależności</h3>
+                            <p class="text-xs text-gray-500 max-w-md mx-auto mb-4">
+                                Uzyskaj dostęp do zaawansowanych wykresów kołowych i słupkowych precyzyjnie obrazujących rozkład Twoich cyfrowych zobowiązań.
+                            </p>
+                            <button class="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl shadow-sm transition">
+                                Odblokuj strefę Premium
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- PANEL 2: HISTORIA TRANSAKCJI I FILTRY --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                
                 <div @click="openHistory = !openHistory" class="p-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/40 transition-colors select-none">
                     <div class="flex items-center gap-2">
                         <div class="flex justify-center items-center w-6 h-6 bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 rounded-full">
@@ -185,8 +270,6 @@
                 </div>
 
                 <div x-show="openHistory" x-collapse x-transition>
-                    
-                    {{-- PASEK FILTRÓW --}}
                     <div class="p-4 bg-gray-50/50 dark:bg-gray-900/20 border-b border-gray-100 dark:border-gray-700">
                         <form method="GET" action="{{ route('analytics') }}" id="filterForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 items-end bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                             <div>
@@ -246,15 +329,10 @@
                                         </svg>
                                     </a>
                                 </div>
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </a>
                             </div>
                         </form>
                     </div>
 
-                    {{-- TABELA HISTORII --}}
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
@@ -287,7 +365,6 @@
                                             <span class="text-[10px] text-gray-500 font-normal">{{ $transaction->currency }}</span>
                                         </td>
                                         
-                                        {{-- AKCJA Z DUŻYM CZERWONYM PRZYCISKIEM X (ZAMIAST STAREGO MARKERU SUB) --}}
                                         <td class="px-4 py-2.5 text-center whitespace-nowrap">
                                             <form method="POST" action="{{ route('transaction.toggle-subscription', $transaction->id) }}">
                                                 @csrf
@@ -308,7 +385,6 @@
                         </table>
                     </div>
 
-                    {{-- PASEK PAGINACJI LARAVELA --}}
                     @if($transactions->hasPages())
                         <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700">
                             {{ $transactions->links() }}
@@ -325,87 +401,102 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         
+        // --- 1. Główny wykres liniowy ---
         const canvas = document.getElementById('myUltimatePremiumChart');
-        if (!canvas) {
-            return; 
+        if (canvas) {
+            try {
+                const ctx = canvas.getContext('2d');
+                const rawData = {!! json_encode($chartData ?? ['labels' => [], 'total' => [], 'no_subs' => [], 'forecast_total' => [], 'forecast_no_subs' => []]) !!};
+
+                window.ultimateChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: rawData.labels,
+                        datasets: [
+                            { label: 'Wydatki całkowite (Historia)', data: rawData.total, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderWidth: 3, tension: 0.4, fill: true },
+                            { label: 'Wydatki całkowite (Prognoza)', data: rawData.forecast_total, borderColor: '#f97316', borderDash: [6, 6], borderWidth: 3, pointRadius: 4, tension: 0.4, fill: false },
+                            { label: 'Bez subskrypcji (Historia)', data: rawData.no_subs, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)', borderWidth: 3, tension: 0.4, fill: true },
+                            { label: 'Bez subskrypcji (Prognoza)', data: rawData.forecast_no_subs, borderColor: '#a855f7', borderDash: [6, 6], borderWidth: 3, pointRadius: 4, tension: 0.4, fill: false }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+            } catch (e) { console.error(e); }
         }
 
-        if (typeof Chart === 'undefined') {
-            console.error("Błąd: Biblioteka Chart.js nie została prawidłowo załadowana.");
-            return;
-        }
+        // --- 2. Wykres kołowy (Struktura subskrypcji) dla Premium ---
+        const doughnutCanvas = document.getElementById('premiumDoughnutChart');
+        if (doughnutCanvas) {
+            try {
+                const ctxDoughnut = doughnutCanvas.getContext('2d');
+                const labels = {!! json_encode($chartStats->pluck('counterparty')) !!};
+                const values = {!! json_encode($chartStats->pluck('total')) !!};
 
-        try {
-            const ctx = canvas.getContext('2d');
-            
-            const rawData = {!! json_encode($chartData ?? [
-                'labels' => [], 
-                'total' => [], 
-                'no_subs' => [], 
-                'forecast_total' => [], 
-                'forecast_no_subs' => []
-            ]) !!};
-
-            if (window.ultimateChartInstance) {
-                window.ultimateChartInstance.destroy();
-            }
-
-            window.ultimateChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: rawData.labels,
-                    datasets: [
-                        {
-                            label: 'Wydatki całkowite (Historia)',
-                            data: rawData.total,
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Wydatki całkowite (Prognoza)',
-                            data: rawData.forecast_total,
-                            borderColor: '#f97316',
-                            borderDash: [6, 6],
-                            borderWidth: 3,
-                            pointRadius: 4,
-                            tension: 0.4,
-                            fill: false
-                        },
-                        {
-                            label: 'Bez subskrypcji (Historia)',
-                            data: rawData.no_subs,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.05)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Bez subskrypcji (Prognoza)',
-                            data: rawData.forecast_no_subs,
-                            borderColor: '#a855f7',
-                            borderDash: [6, 6],
-                            borderWidth: 3,
-                            pointRadius: 4,
-                            tension: 0.4,
-                            fill: false
+                new Chart(ctxDoughnut, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#eab308', '#10b981'],
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { 
+                                position: 'bottom', 
+                                labels: { 
+                                    boxWidth: 12, 
+                                    font: { size: 10 }, 
+                                    color: '#ffffff'
+                                } 
+                            } 
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        y: { beginAtZero: true }
                     }
-                }
-            });
-        } catch (error) {
-            console.error("Wystąpił błąd podczas inicjalizacji wykresu:", error);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        // --- 3. Wykres słupkowy (Subskrypcje vs Jednorazowe) dla Premium ---
+        const barCanvas = document.getElementById('premiumRatioBarChart');
+        if (barCanvas) {
+            try {
+                const ctxBar = barCanvas.getContext('2d');
+                new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Podział kosztów'],
+                        datasets: [
+                            { label: 'Subskrypcje (Stałe)', data: [{{ $totalSubsSum }}], backgroundColor: '#6366f1', borderRadius: 8 },
+                            { label: 'Jednorazowe (Zmienne)', data: [{{ $nonSubsSum }}], backgroundColor: '#94a3b8', borderRadius: 8 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { 
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { color: '#ffffff' } // USTAWIONO BIAŁE ETYKIETY OSI Y
+                            },
+                            x: { 
+                                ticks: { color: '#ffffff' } // USTAWIONO BIAŁE ETYKIETY OSI X
+                            }
+                        },
+                        plugins: { 
+                            legend: { 
+                                position: 'bottom', 
+                                labels: { 
+                                    color: '#ffffff'
+                                } 
+                            } 
+                        }
+                    }
+                });
+            } catch (e) { console.error(e); }
         }
     });
     </script>
