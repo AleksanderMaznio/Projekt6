@@ -1,11 +1,11 @@
 <section>
     <header>
         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {{ __('Profile Information') }}
+            Informacje o profilu
         </h2>
 
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {{ __("Update your account's profile information and email address.") }}
+            Zaktualizuj swoje dane profilowe oraz adres e-mail.
         </p>
     </header>
 
@@ -17,48 +17,49 @@
     @method('patch')
 
     <div class="mt-4">
-    @if($user->avatar && file_exists(public_path('storage/' . $user->avatar)))
-    <img src="{{ asset('storage/' . $user->avatar) }}" class="w-20 h-20 rounded-full object-cover">
-@else
-    <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
-        <img src="{{ asset('images/wallet-svgrepo-com.svg') }}" class="w-12 h-12" alt="Logo">
-    </div>
-@endif
-<a href="{{ asset('images/wallet-svgrepo-com.svg') }}" target="_blank">
+        <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+            @if($user->avatar && file_exists(public_path('storage/' . $user->avatar)))
+                <img src="{{ asset('storage/' . $user->avatar) }}" class="w-full h-full object-cover" alt="Zdjęcie profilowe">
+            @else
+                <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+            @endif
+        </div>
 
-    <input id="avatar" name="avatar" type="file" class="mt-1 block w-full text-sm text-gray-500
-        file:mr-4 file:py-2 file:px-4
-        file:rounded-full file:border-0
-        file:text-sm file:font-semibold
-        file:bg-indigo-50 file:text-indigo-700
-        hover:file:bg-indigo-100" 
-    />
-    <x-input-error class="mt-2" :messages="$errors->get('avatar')" />
+        <div class="mt-3">
+            <label for="avatar" class="inline-flex cursor-pointer rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+                Wybierz zdjęcie
+            </label>
+            <input id="avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" class="sr-only" />
+            <p class="mt-2 text-xs text-gray-500">PNG, JPG lub WEBP, do 2 MB.</p>
+            <x-input-error class="mt-2" :messages="$errors->get('avatar')" />
+        </div>
     </div>
         <div>
-            <x-input-label for="name" :value="__('Name')" />
+            <x-input-label for="name" :value="__('Imię i nazwisko')" />
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
         <div>
-            <x-input-label for="email" :value="__('Email')" />
+            <x-input-label for="email" :value="__('Adres e-mail')" />
             <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                 <div>
                     <p class="text-sm mt-2 text-gray-800 dark:text-gray-200">
-                        {{ __('Your email address is unverified.') }}
+                        Twój adres e-mail nie został jeszcze zweryfikowany.
 
                         <button form="send-verification" class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800">
-                            {{ __('Click here to re-send the verification email.') }}
+                            Kliknij tutaj, aby wysłać ponownie wiadomość weryfikacyjną.
                         </button>
                     </p>
 
                     @if (session('status') === 'verification-link-sent')
                         <p class="mt-2 font-medium text-sm text-green-600 dark:text-green-400">
-                            {{ __('A new verification link has been sent to your email address.') }}
+                            Nowy link weryfikacyjny został wysłany na Twój adres e-mail.
                         </p>
                     @endif
                 </div>
@@ -66,7 +67,7 @@
         </div>
 
         <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
+            <x-primary-button>Zapisz</x-primary-button>
 
             @if (session('status') === 'profile-updated')
                 <p
@@ -75,7 +76,7 @@
                     x-transition
                     x-init="setTimeout(() => show = false, 2000)"
                     class="text-sm text-gray-600 dark:text-gray-400"
-                >{{ __('Saved.') }}</p>
+                >Zapisano.</p>
             @endif
         </div>
     </form>
