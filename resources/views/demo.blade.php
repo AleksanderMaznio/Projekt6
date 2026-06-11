@@ -134,7 +134,7 @@
                 chartInstance: null,
 
                 init() {
-                    // Wczytaj wstępną historię transakcji, żeby strona nie była pusta
+                    
                     this.resetDemo();
                 },
 
@@ -149,7 +149,7 @@
                 },
 
                 simulateCsvImport() {
-                    // Dodanie pełnych danych symulujących poprawnie działający skrypt detekcji
+                    
                     this.transactions = [
                         { date: '2026-06-10', title: 'Wypłata czerwiec', counterparty: 'Pracodawca Sp. z o.o.', amount: 3500.00, is_sub: false },
                         { date: '2026-06-06', title: 'Opłata członkowska', counterparty: 'CityFit', amount: -139.00, is_sub: true },
@@ -184,7 +184,7 @@
                         this.chartInstance.destroy();
                     }
 
-                    // Mapowanie danych wydatków do wykresu demo
+                   
                     const hasData = this.subscriptions.length > 0;
                     const labels = hasData ? this.subscriptions.map(s => s.name) : ['Biedronka', 'Orlen'];
                     const dataValues = hasData ? this.subscriptions.map(s => parseFloat(s.price)) : [154.20, 210.00];
