@@ -310,10 +310,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Bezpiecznik: sprawdzamy istnienie płótna wykresu (wyrenderuje się tylko dla Premium)
+        
         const canvas = document.getElementById('myUltimatePremiumChart');
         if (!canvas) {
-            return; // Kończymy dyskretnie działanie, jeśli zalogowany jest zwykły użytkownik
+            return; 
         }
 
         if (typeof Chart === 'undefined') {
@@ -324,7 +324,7 @@
         try {
             const ctx = canvas.getContext('2d');
             
-            // Pobieranie danych z backendu z pełnym fallbackiem struktury na wypadek braku zmiennych
+           
             const rawData = {!! json_encode($chartData ?? [
                 'labels' => [], 
                 'total' => [], 
